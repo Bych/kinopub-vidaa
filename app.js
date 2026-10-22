@@ -254,6 +254,22 @@
     if (current === 'login') { loginForm.type(ch); ev.preventDefault(); }
     else if (current === 'search') { search.type(ch); ev.preventDefault(); }
   });
+  /* Cmd+V / Ctrl+V: paste into the current login field (or the search line) */
+  document.addEventListener('paste', function (ev) {
+    if (current !== 'login' && current !== 'search') return;
+    var cd = ev.clipboardData || window.clipboardData, t = '';
+    try { t = cd ? cd.getData('text') : ''; } catch (e) { t = ''; }
+    t = (t || '').replace(/[\r\n\t]+/g, '');
+    if (!t) return;
+    ev.preventDefault();
+    if (current === 'login') {
+      var f = loginForm.field;
+      loginForm[f] += f === 'code' ? t.replace(/\s+/g, '') : t;
+      loginForm.render();
+    } else {
+      for (var i = 0; i < t.length; i++) search.type(t.charAt(i));
+    }
+  });
 
   /* ---------- on-screen keyboard ---------- */
   var LAYOUTS = {

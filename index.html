@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1920, height=1080, user-scalable=no">
+  <title>KinoPub</title>
+  <link rel="icon" href="icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Экран входа (код устройства) -->
+  <section id="screen-auth" class="screen">
+    <div class="auth-box">
+      <div class="logo">KinoPub</div>
+      <p class="auth-hint">Откройте на телефоне или компьютере:</p>
+      <p class="auth-url" id="auth-url">kino.watch/device</p>
+      <p class="auth-hint">и введите код:</p>
+      <div class="auth-code" id="auth-code">······</div>
+      <p class="auth-status" id="auth-status">Получаю код…</p>
+      <button class="btn focusable" id="auth-retry">Запросить новый код</button>
+    </div>
+  </section>
+
+  <!-- Главная: ряды плиток -->
+  <section id="screen-home" class="screen">
+    <header class="topbar">
+      <span class="logo small">KinoPub</span>
+      <nav class="topnav">
+        <button class="btn focusable" data-action="search">Поиск</button>
+        <button class="btn focusable" data-action="section" data-type="movie">Фильмы</button>
+        <button class="btn focusable" data-action="section" data-type="serial">Сериалы</button>
+        <button class="btn focusable" data-action="section" data-type="documovie">Доку</button>
+        <button class="btn focusable" data-action="section" data-type="concert">Концерты</button>
+        <button class="btn focusable" data-action="settings">Настройки</button>
+      </nav>
+    </header>
+    <div id="home-rows" class="rows"></div>
+  </section>
+
+  <!-- Раздел (фильмы / сериалы): сетка с подгрузкой -->
+  <section id="screen-section" class="screen">
+    <header class="topbar">
+      <span class="logo small" id="section-title">Фильмы</span>
+      <nav class="topnav" id="section-sorts">
+        <button class="btn focusable" data-sort="updated-">Обновлённые</button>
+        <button class="btn focusable" data-sort="created-">Новинки</button>
+        <button class="btn focusable" data-sort="views-">Популярные</button>
+        <button class="btn focusable" data-sort="rating-">По рейтингу</button>
+        <button class="btn focusable" data-sort="year-">По году</button>
+      </nav>
+    </header>
+    <div id="section-grid" class="grid"></div>
+  </section>
+
+  <!-- Поиск с экранной клавиатурой -->
+  <section id="screen-search" class="screen">
+    <div class="search-left">
+      <div class="search-input" id="search-input"><span class="caret">|</span></div>
+      <div class="osk" id="osk"></div>
+    </div>
+    <div class="search-right">
+      <div id="search-grid" class="grid"></div>
+    </div>
+  </section>
+
+  <!-- Карточка фильма/сериала -->
+  <section id="screen-item" class="screen">
+    <div class="item-bg" id="item-bg"></div>
+    <div class="item-body">
+      <div class="item-poster"><img id="item-poster" alt=""></div>
+      <div class="item-info">
+        <h1 id="item-title"></h1>
+        <div class="item-meta" id="item-meta"></div>
+        <p class="item-plot" id="item-plot"></p>
+        <div class="item-actions" id="item-actions"></div>
+        <div class="seasons" id="item-seasons"></div>
+        <div class="episodes" id="item-episodes"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Плеер -->
+  <section id="screen-player" class="screen">
+    <video id="video" preload="auto"></video>
+    <div class="player-osd" id="player-osd">
+      <div class="osd-title" id="osd-title"></div>
+      <div class="osd-bar"><div class="osd-fill" id="osd-fill"></div></div>
+      <div class="osd-time"><span id="osd-cur">0:00</span> / <span id="osd-dur">0:00</span> <span id="osd-info"></span></div>
+    </div>
+    <div class="player-menu" id="player-menu"></div>
+    <div class="player-msg" id="player-msg"></div>
+  </section>
+
+  <!-- Настройки -->
+  <section id="screen-settings" class="screen">
+    <div class="settings-box" id="settings-box">
+      <h1>Настройки</h1>
+    </div>
+  </section>
+
+  <div id="toast" class="toast"></div>
+  <div id="loader" class="loader">Загрузка…</div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

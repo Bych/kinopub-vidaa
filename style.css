@@ -1,0 +1,110 @@
+/* KinoPub for VIDAA — 1920x1080, 10-foot UI */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0b0d12; color: #e8e8ec; font-family: Arial, Helvetica, sans-serif; font-size: 28px; }
+img { display: block; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: default; }
+
+.screen { display: none; position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+.screen.active { display: block; }
+
+.logo { font-weight: bold; font-size: 64px; color: #ff5c35; letter-spacing: 2px; }
+.logo.small { font-size: 40px; }
+
+/* focus */
+.focusable { outline: none; }
+.focusable.focus { outline: 5px solid #ff5c35; outline-offset: 3px; z-index: 2; }
+.btn { padding: 14px 32px; border-radius: 12px; background: #1e2330; font-size: 30px; }
+.btn.focus { background: #ff5c35; color: #fff; outline: none; }
+.btn.on { box-shadow: inset 0 -5px 0 #ff5c35; }
+
+/* auth */
+.auth-box { position: absolute; left: 0; right: 0; top: 160px; text-align: center; }
+.auth-hint { margin-top: 40px; font-size: 34px; color: #aab; }
+.auth-url { margin-top: 10px; font-size: 56px; color: #fff; }
+.auth-code { margin: 20px auto 0; font-size: 140px; letter-spacing: 24px; font-weight: bold; color: #ff5c35; font-family: "Courier New", monospace; }
+.auth-status { margin-top: 30px; font-size: 30px; color: #8a8fa3; }
+#auth-retry { margin-top: 40px; }
+
+/* topbar */
+.topbar { display: flex; align-items: center; height: 120px; padding: 0 60px; }
+.topnav { margin-left: 60px; }
+.topnav .btn { margin-right: 16px; }
+
+/* rows (home) */
+.rows { position: absolute; top: 120px; left: 0; right: 0; bottom: 0; overflow: hidden; padding: 0 60px; }
+.row { margin-bottom: 36px; }
+.row-title { font-size: 34px; margin-bottom: 14px; color: #c9ccd8; }
+.row-items { white-space: nowrap; overflow: hidden; height: 330px; }
+.tile { display: inline-block; vertical-align: top; width: 200px; margin-right: 24px; white-space: normal; border-radius: 10px; }
+.tile img { width: 200px; height: 300px; object-fit: cover; border-radius: 10px; background: #1e2330; }
+.tile .tile-title { font-size: 22px; margin-top: 8px; height: 56px; overflow: hidden; color: #c9ccd8; line-height: 28px; }
+.tile .badge { position: absolute; font-size: 20px; background: #ff5c35; color: #fff; padding: 2px 8px; border-radius: 6px; margin: 8px; }
+.tile { position: relative; }
+.tile.more { width: 200px; height: 300px; background: #1e2330; text-align: center; line-height: 300px; font-size: 30px; }
+.tile .progress { position: absolute; left: 0; right: 0; top: 292px; height: 8px; background: rgba(0,0,0,.6); }
+.tile .progress i { display: block; height: 8px; background: #ff5c35; }
+
+/* grid (section/search) */
+.grid { position: absolute; top: 120px; left: 60px; right: 60px; bottom: 0; overflow: hidden; }
+.grid .tile { margin-bottom: 20px; }
+#screen-search .grid { top: 40px; left: 0; right: 40px; }
+
+/* search */
+.search-left { position: absolute; left: 60px; top: 40px; width: 640px; }
+.search-right { position: absolute; left: 760px; top: 0; right: 0; bottom: 0; }
+.search-input { height: 80px; background: #1e2330; border-radius: 12px; padding: 0 24px; line-height: 80px; font-size: 40px; overflow: hidden; white-space: nowrap; margin-bottom: 24px; }
+.search-input .caret { color: #ff5c35; }
+.osk { width: 640px; }
+.osk .key { display: inline-block; width: 60px; height: 60px; margin: 0 4px 8px 0; line-height: 60px; text-align: center; background: #1e2330; border-radius: 8px; font-size: 28px; }
+.osk .key.wide { width: 188px; }
+.osk .key.focus { background: #ff5c35; color: #fff; }
+
+/* item */
+.item-bg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background-size: cover; background-position: center; opacity: .18; filter: blur(8px); }
+.item-body { position: absolute; left: 80px; top: 60px; right: 80px; bottom: 0; display: flex; }
+.item-poster img { width: 400px; height: 600px; object-fit: cover; border-radius: 14px; background: #1e2330; }
+.item-info { margin-left: 60px; flex: 1; overflow: hidden; }
+.item-info h1 { font-size: 52px; line-height: 60px; margin-bottom: 12px; }
+.item-meta { color: #aab; font-size: 26px; margin-bottom: 16px; }
+.item-plot { font-size: 26px; line-height: 36px; color: #c9ccd8; max-height: 180px; overflow: hidden; margin-bottom: 24px; }
+.item-actions .btn { margin-right: 16px; margin-bottom: 16px; }
+.seasons { margin: 10px 0 14px; white-space: nowrap; overflow: hidden; }
+.seasons .btn { padding: 8px 20px; font-size: 26px; margin-right: 10px; }
+.episodes { height: 420px; overflow: hidden; }
+.ep { padding: 12px 20px; border-radius: 10px; background: rgba(30,35,48,.7); margin-bottom: 8px; font-size: 26px; position: relative; }
+.ep.focus { background: #ff5c35; color: #fff; outline: none; }
+.ep .ep-dur { position: absolute; right: 20px; top: 12px; color: #aab; }
+.ep.focus .ep-dur { color: #fff; }
+.ep.watched { opacity: .55; }
+.ep .progress { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; }
+.ep .progress i { display: block; height: 6px; background: #ff5c35; }
+
+/* player */
+#screen-player { background: #000; }
+#video { width: 1920px; height: 1080px; background: #000; }
+.player-osd { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 80px; background: linear-gradient(transparent, rgba(0,0,0,.85)); display: none; }
+.player-osd.show { display: block; }
+.osd-title { font-size: 36px; margin-bottom: 16px; }
+.osd-bar { height: 10px; background: rgba(255,255,255,.25); border-radius: 5px; overflow: hidden; }
+.osd-fill { height: 10px; background: #ff5c35; width: 0; }
+.osd-time { margin-top: 10px; font-size: 26px; color: #ccd; }
+.player-menu { position: absolute; right: 60px; top: 60px; width: 520px; background: rgba(11,13,18,.95); border-radius: 14px; padding: 20px; display: none; }
+.player-menu.show { display: block; }
+.player-menu h2 { font-size: 28px; color: #aab; margin: 10px 0 8px; }
+.player-menu .btn { display: block; width: 100%; text-align: left; margin-bottom: 8px; font-size: 26px; padding: 10px 20px; }
+.player-msg { position: absolute; left: 0; right: 0; top: 460px; text-align: center; font-size: 40px; color: #fff; text-shadow: 0 2px 8px #000; display: none; }
+.player-msg.show { display: block; }
+
+/* settings */
+.settings-box { position: absolute; left: 160px; top: 80px; width: 1600px; }
+.settings-box h1 { font-size: 48px; margin-bottom: 30px; }
+.settings-box h2 { font-size: 30px; color: #aab; margin: 24px 0 10px; }
+.settings-box .btn { margin-right: 12px; margin-bottom: 10px; }
+.settings-box .info { color: #8a8fa3; font-size: 24px; margin-top: 20px; line-height: 34px; }
+
+/* misc */
+.toast { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); background: #1e2330; padding: 16px 32px; border-radius: 12px; font-size: 28px; display: none; z-index: 10; }
+.toast.show { display: block; }
+.loader { position: absolute; right: 60px; top: 30px; font-size: 24px; color: #ff5c35; display: none; z-index: 10; }
+.loader.show { display: block; }
+.empty { color: #8a8fa3; font-size: 30px; padding: 40px; }

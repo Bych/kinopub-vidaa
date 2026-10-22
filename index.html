@@ -8,16 +8,20 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Экран входа (код устройства) -->
-  <section id="screen-auth" class="screen">
-    <div class="auth-box">
+  <!-- Вход: логин и пароль от kino.watch -->
+  <section id="screen-login" class="screen">
+    <div class="login-left">
       <div class="logo">KinoPub</div>
-      <p class="auth-hint">Откройте на телефоне или компьютере:</p>
-      <p class="auth-url" id="auth-url">kino.watch/device</p>
-      <p class="auth-hint">и введите код:</p>
-      <div class="auth-code" id="auth-code">······</div>
-      <p class="auth-status" id="auth-status">Получаю код…</p>
-      <button class="btn focusable" id="auth-retry">Запросить новый код</button>
+      <p class="login-hint">Войдите с логином и паролем от kino.watch</p>
+      <div class="field focusable" id="login-user" data-field="user"><span class="field-label">Логин или e-mail</span><span class="field-value"></span></div>
+      <div class="field focusable" id="login-pass" data-field="pass"><span class="field-label">Пароль</span><span class="field-value"></span></div>
+      <button class="btn focusable" id="login-show">Показать пароль</button>
+      <button class="btn focusable primary" id="login-go">Войти</button>
+      <p class="login-status" id="login-status"></p>
+      <p class="login-note">Пароль уходит только на ваш прокси и на kino.watch и на телевизоре не сохраняется. После входа телевизор хранит лишь cookie сайта.</p>
+    </div>
+    <div class="login-right">
+      <div class="osk" id="login-osk"></div>
     </div>
   </section>
 
@@ -27,36 +31,46 @@
       <span class="logo small">KinoPub</span>
       <nav class="topnav">
         <button class="btn focusable" data-action="search">Поиск</button>
-        <button class="btn focusable" data-action="section" data-type="movie">Фильмы</button>
-        <button class="btn focusable" data-action="section" data-type="serial">Сериалы</button>
-        <button class="btn focusable" data-action="section" data-type="documovie">Доку</button>
-        <button class="btn focusable" data-action="section" data-type="concert">Концерты</button>
-        <button class="btn focusable" data-action="settings">Настройки</button>
+        <button class="btn focusable" data-action="section" data-path="/movie">Фильмы</button>
+        <button class="btn focusable" data-action="section" data-path="/serial">Сериалы</button>
+        <button class="btn focusable" data-action="section" data-path="/anime">Аниме</button>
+        <button class="btn focusable" data-action="section" data-path="/documovie">Доку</button>
+        <button class="btn focusable" data-action="section" data-path="/docuserial">Докусериалы</button>
+        <button class="btn focusable" data-action="section" data-path="/concert">Концерты</button>
+        <button class="btn focusable" data-action="section" data-path="/tvshow">ТВ-шоу</button>
+        <button class="btn focusable" data-action="bookmarks">Закладки</button>
+        <button class="btn focusable" data-action="settings">⚙</button>
       </nav>
     </header>
     <div id="home-rows" class="rows"></div>
   </section>
 
-  <!-- Раздел (фильмы / сериалы): сетка с подгрузкой -->
+  <!-- Сетка: раздел каталога, папка закладок, история -->
   <section id="screen-section" class="screen">
     <header class="topbar">
       <span class="logo small" id="section-title">Фильмы</span>
       <nav class="topnav" id="section-sorts">
-        <button class="btn focusable" data-sort="updated-">Обновлённые</button>
-        <button class="btn focusable" data-sort="created-">Новинки</button>
-        <button class="btn focusable" data-sort="views-">Популярные</button>
-        <button class="btn focusable" data-sort="rating-">По рейтингу</button>
-        <button class="btn focusable" data-sort="year-">По году</button>
+        <button class="btn focusable" data-order="updated">Обновлённые</button>
+        <button class="btn focusable" data-order="added">Новые</button>
+        <button class="btn focusable" data-order="views">Популярные</button>
+        <button class="btn focusable" data-order="kinopoisk">Кинопоиск</button>
+        <button class="btn focusable" data-order="imdb">IMDb</button>
       </nav>
     </header>
     <div id="section-grid" class="grid"></div>
+  </section>
+
+  <!-- Закладки: список папок -->
+  <section id="screen-bookmarks" class="screen">
+    <header class="topbar"><span class="logo small">Закладки</span></header>
+    <div id="bookmarks-list" class="folder-list"></div>
   </section>
 
   <!-- Поиск с экранной клавиатурой -->
   <section id="screen-search" class="screen">
     <div class="search-left">
       <div class="search-input" id="search-input"><span class="caret">|</span></div>
-      <div class="osk" id="osk"></div>
+      <div class="osk" id="search-osk"></div>
     </div>
     <div class="search-right">
       <div id="search-grid" class="grid"></div>
@@ -68,8 +82,9 @@
     <div class="item-bg" id="item-bg"></div>
     <div class="item-body">
       <div class="item-poster"><img id="item-poster" alt=""></div>
-      <div class="item-info">
+      <div class="item-info" id="item-info">
         <h1 id="item-title"></h1>
+        <div class="item-orig" id="item-orig"></div>
         <div class="item-meta" id="item-meta"></div>
         <p class="item-plot" id="item-plot"></p>
         <div class="item-actions" id="item-actions"></div>
@@ -77,6 +92,7 @@
         <div class="episodes" id="item-episodes"></div>
       </div>
     </div>
+    <div class="overlay" id="item-overlay"></div>
   </section>
 
   <!-- Плеер -->
@@ -86,6 +102,7 @@
       <div class="osd-title" id="osd-title"></div>
       <div class="osd-bar"><div class="osd-fill" id="osd-fill"></div></div>
       <div class="osd-time"><span id="osd-cur">0:00</span> / <span id="osd-dur">0:00</span> <span id="osd-info"></span></div>
+      <div class="osd-hint">OK — пауза · ←/→ 10 с · ↑/↓ 1 мин · цветные кнопки или Info — звук, субтитры, качество</div>
     </div>
     <div class="player-menu" id="player-menu"></div>
     <div class="player-msg" id="player-msg"></div>
@@ -93,15 +110,14 @@
 
   <!-- Настройки -->
   <section id="screen-settings" class="screen">
-    <div class="settings-box" id="settings-box">
-      <h1>Настройки</h1>
-    </div>
+    <div class="settings-box" id="settings-box"></div>
   </section>
 
   <div id="toast" class="toast"></div>
   <div id="loader" class="loader">Загрузка…</div>
 
   <script src="config.js"></script>
+  <script src="parser.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

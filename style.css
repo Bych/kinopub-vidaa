@@ -175,3 +175,14 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: def
 .player-menu .btn { padding: 8px 20px; font-size: 24px; margin-bottom: 6px; }
 .row-items { height: 380px; padding-top: 10px; }
 .row { margin-bottom: 20px; }
+
+/* focus ring around the poster; rows/grids leave room for the scaled tile */
+.tile.focusable.focus { outline: none; transform: scale(1.05); transform-origin: 50% 40%; z-index: 2; }
+.tile.focus img { box-shadow: 0 0 0 5px #ff5c35, 0 10px 30px rgba(0,0,0,.6); }
+.tile.focus .tile-title { color: #fff; }
+.tile.more.focus { box-shadow: 0 0 0 5px #ff5c35; background: #2a3040; }
+.row-items { height: 420px; padding: 22px 16px 0; margin: 0 -16px; }
+.row { margin-bottom: 4px; }
+.row-title { margin-bottom: 0; }
+.grid { padding: 22px 16px 0; }
+.grid .tile { margin-bottom: 26px; }

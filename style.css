@@ -1,6 +1,7 @@
 /* KinoPub for VIDAA — 1920x1080, 10-foot UI */
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0b0d12; color: #e8e8ec; font-family: Arial, Helvetica, sans-serif; font-size: 28px; }
+html { width: 100%; height: 100%; overflow: hidden; background: #000; }
+body { width: 1920px; height: 1080px; overflow: hidden; position: relative; background: #0b0d12; color: #e8e8ec; font-family: Arial, Helvetica, sans-serif; font-size: 28px; }
 img { display: block; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: default; }
 
@@ -158,3 +159,19 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: def
 .hidden { display: none !important; }
 #login-resend { margin: 10px 16px 0 0; }
 #login-code .field-value { letter-spacing: 8px; }
+
+/* ---- polish ---- */
+.topnav .btn { padding: 12px 18px; font-size: 25px; margin-right: 6px; }
+.tile .badge { top: 0; left: 0; z-index: 1; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+.tile .tile-title { height: 56px; }
+.tile.focus { transform: scale(1.06); transition: transform .12s; }
+.item-meta { font-size: 28px; color: #c9ccd8; margin-bottom: 12px; max-height: none; }
+.item-badges { margin-bottom: 18px; }
+.chip { display: inline-block; padding: 4px 12px; margin: 0 8px 8px 0; border-radius: 8px; background: rgba(255,255,255,.1); font-size: 22px; color: #e8e8ec; }
+.chip.rating { background: rgba(255,92,53,.25); color: #fff; font-weight: bold; }
+.chip.muted { background: none; color: #8a8fa3; padding-left: 0; }
+.item-plot { max-height: 180px; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; }
+.episodes { height: 440px; }
+.player-menu .btn { padding: 8px 20px; font-size: 24px; margin-bottom: 6px; }
+.row-items { height: 380px; padding-top: 10px; }
+.row { margin-bottom: 20px; }

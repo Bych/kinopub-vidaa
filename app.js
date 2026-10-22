@@ -452,7 +452,7 @@
   }
   function loadHome() {
     clear($('home-rows'));
-    var wl = row('Я смотрю'), hist = row('Недавно смотрел');
+    var wl = row('Я смотрю');
     if (auth.user) {
       site.page('/watchlist/' + encodeURIComponent(auth.user), function (err, d) {
         var items = err ? [] : P.list(d).items;
@@ -463,11 +463,6 @@
         if (!focused || !document.body.contains(focused) || !screens.home.contains(focused)) focusFirst();
       });
     } else wl.parentNode.style.display = 'none';
-    site.page('/history', function (err, d) {
-      var l = err ? { items: [] } : P.list(d);
-      if (!l.items.length) { hist.parentNode.style.display = 'none'; return; }
-      fill(hist, l.items, l.hasNext ? pager('/history') : null);
-    });
     var rest = el('div'); $('home-rows').appendChild(rest);
     site.page('/', function (err, d) {
       if (err) return;
@@ -486,6 +481,7 @@
       if (a === 'search') openSearch();
       else if (a === 'section') openSection(b.getAttribute('data-path'), b.textContent, true);
       else if (a === 'bookmarks') openBookmarks();
+      else if (a === 'history') openSection('/history', 'История', false);
       else if (a === 'settings') openSettings();
     };
   });
@@ -500,7 +496,7 @@
     loadSection();
   }
   function loadSection() {
-    var grid = $('section-grid'); clear(grid); grid.scrollTop = 0;
+    var grid = $('section-grid'); clear(grid); grid.kpSeen = {}; grid.scrollTop = 0;
     each($('section-sorts').querySelectorAll('.btn'), function (b) { b.className = 'btn focusable' + (b.getAttribute('data-order') === section.order ? ' on' : ''); });
     var path = section.sortable ? setParam(setParam(section.path, 'order', section.order), 'period', 'all') : section.path;
     site.page(path, function (err, d) {
@@ -520,7 +516,6 @@
     var box = $('bookmarks-list'); clear(box);
     showScreen('bookmarks');
     function add(title, fn) { var b = el('button', 'btn focusable folder', title); b.onclick = fn; box.appendChild(b); return b; }
-    add('История просмотров', function () { openSection('/history', 'История', false); });
     if (auth.user) add('Я смотрю', function () { openSection('/watchlist/' + encodeURIComponent(auth.user), 'Я смотрю', false); });
     focusFirst();
     site.page('/favorites', function (err, d) {
@@ -543,7 +538,7 @@
     },
     run: function () {
       if (search.q.length < 2) return;
-      var grid = $('search-grid'); clear(grid);
+      var grid = $('search-grid'); clear(grid); grid.kpSeen = {};
       site.page('/item/search?query=' + encodeURIComponent(search.q), function (err, d) {
         if (err) return;
         var items = P.list(d).items;
@@ -579,12 +574,19 @@
     $('item-poster').src = it.poster;
     $('item-title').textContent = it.title;
     $('item-orig').textContent = it.orig;
-    var meta = [];
-    each(['Год', 'Страна', 'Жанр', 'Рейтинг', 'Длительность', 'Режиссёр', 'Создатель', 'Статус', 'Добавлен'], function (k) { var v = infoValue(it, k); if (v) meta.push(v.replace(/ \/ [\d,]+/g, '')); });
-    var year = infoValue(it, 'Год');
-    var chips = it.chips.filter(function (c) { return c !== year; });
-    if (chips.length) meta.push(chips.join(' '));
-    $('item-meta').textContent = meta.join('  •  ');
+    var meta = [], year = infoValue(it, 'Год');
+    if (year) meta.push(year);
+    each(['Страна', 'Жанр'], function (k) { var v = infoValue(it, k); if (v) meta.push(v.split(', ').slice(0, 3).join(', ')); });
+    var dur = /\((\d+) мин\)/.exec(infoValue(it, 'Длительность'));
+    if (dur) meta.push(fmtDur(dur[1] * 60) + (it.serial ? ' серия' : ''));
+    $('item-meta').textContent = meta.join('  ·  ');
+    var badges = $('item-badges'); clear(badges);
+    var rating = infoValue(it, 'Рейтинг').replace(/ \/ [\d,]+/g, '');
+    each(rating.match(/(КП|IMDb) [\d.]+/g) || [], function (r) { badges.appendChild(el('span', 'chip rating', r)); });
+    each(it.chips, function (c) { if (c !== year && !/^\d+\+$/.test(c)) badges.appendChild(el('span', 'chip', c)); });
+    var age = infoValue(it, 'Возраст'); if (age) badges.appendChild(el('span', 'chip', age));
+    var status = it.serial ? [infoValue(it, 'Статус'), infoValue(it, 'Добавлен') ? 'добавлен ' + infoValue(it, 'Добавлен') : ''].filter(function (x) { return x; }).join(', ') : '';
+    if (status) badges.appendChild(el('span', 'chip muted', status));
     $('item-plot').textContent = it.plot;
 
     var actions = $('item-actions'); clear(actions);
@@ -876,7 +878,7 @@
       var out = [];
       if (!player.hls) return out;
       out.push({ name: 'Авто', on: player.hls.autoLevelEnabled, pick: function () { player.hls.currentLevel = -1; } });
-      each(player.hls.levels, function (l, i) { out.push({ name: (l.height ? l.height + 'p' : 'Уровень ' + (i + 1)) + (l.bitrate ? ' (' + Math.round(l.bitrate / 100000) / 10 + ' Мбит/с)' : ''), on: !player.hls.autoLevelEnabled && player.hls.currentLevel === i, pick: function () { player.hls.currentLevel = i; } }); });
+      each(player.hls.levels, function (l, i) { out.push({ name: qualityName(l, i) + (l.bitrate ? ' (' + Math.round(l.bitrate / 100000) / 10 + ' Мбит/с)' : ''), on: !player.hls.autoLevelEnabled && player.hls.currentLevel === i, pick: function () { player.hls.currentLevel = i; } }); });
       return out;
     },
 
@@ -896,6 +898,7 @@
       if (audio.length > 1) section('Звук', audio, function (x) { settings.audio = x.name; settings.audioLang = x.lang; saveSettings(); });
       else if (player.engine === 'native') m.appendChild(el('h2', null, 'Звук: дорожки недоступны во встроенном плеере — переключите на hls.js ниже'));
       var subs = player.subsList();
+      subs = subs.map(function (x, i) { x.i = i; return x; }).sort(function (a, b) { return subsRank(a) - subsRank(b) || a.i - b.i; });
       if (subs.length) {
         subs.unshift({ name: 'Выключены', on: settings.subs === 'off', pick: function () { player.subsOff(); }, off: true });
         section('Субтитры', subs, function (x) { settings.subs = x.off ? 'off' : x.name; saveSettings(); });
@@ -954,6 +957,17 @@
     player.start({ episodes: list, index: idx, ep: ep, title: title }, t);
   }
 
+  function qualityName(l, i) {
+    var w = l.width || 0;
+    if (w >= 3800) return '4K';
+    if (w >= 1900) return '1080p';
+    if (w >= 1260) return '720p';
+    if (w >= 700) return '480p';
+    return l.height ? l.height + 'p' : 'Уровень ' + (i + 1);
+  }
+  /* subtitles: Russian, English, Ukrainian first, the rest as the site lists them */
+  function subsRank(s) { var l = (s.lang || s.name || '').toLowerCase().slice(0, 3); return l === 'rus' ? 0 : l === 'eng' ? 1 : l === 'ukr' ? 2 : 3; }
+
   /* ---------- settings ---------- */
   function openSettings() {
     var box = $('settings-box'); clear(box);
@@ -992,6 +1006,17 @@
       'Последние кнопки пульта (keyCode): ' + lastKeys.join(', ')));
     showScreen('settings');
   }
+
+  /* ---------- scale 1920x1080 to the real screen ---------- */
+  function fitScreen() {
+    var w = window.innerWidth || 1920, h = window.innerHeight || 1080;
+    var k = Math.min(w / 1920, h / 1080);
+    var b = document.body.style;
+    b.transformOrigin = b.webkitTransformOrigin = '0 0';
+    b.transform = b.webkitTransform = 'translate(' + Math.round((w - 1920 * k) / 2) + 'px,' + Math.round((h - 1080 * k) / 2) + 'px) scale(' + k + ')';
+  }
+  fitScreen();
+  window.addEventListener('resize', fitScreen);
 
   /* ---------- boot ---------- */
   function boot() {

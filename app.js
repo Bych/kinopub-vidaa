@@ -15,8 +15,33 @@
   function el(tag, cls, text) {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
-    if (text != null) e.textContent = text;
+    if (text != null) setText(e, text);
     return e;
+  }
+  /* The TV's font has no ▶ ✓ ★ ☑ ☐ ❚❚ ✕ ⌫ ␣, so they are drawn as small SVG icons.
+     The original symbol is kept in the icon's <title>, so textContent stays the same. */
+  var ICONS = {
+    '▶': '<path d="M7 4.5v15l13-7.5z" fill="currentColor"/>',
+    '❚❚': '<path d="M6 4h4v16H6zM14 4h4v16h-4z" fill="currentColor"/>',
+    '✓': '<path d="M4 12.5l5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
+    '✕': '<path d="M5.5 5.5l13 13M18.5 5.5l-13 13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>',
+    '★': '<path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" fill="currentColor"/>',
+    '☐': '<rect x="3.5" y="3.5" width="17" height="17" rx="3" fill="none" stroke="currentColor" stroke-width="2.4"/>',
+    '☑': '<rect x="3.5" y="3.5" width="17" height="17" rx="3" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M7.5 12.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>',
+    '⌫': '<path d="M21 5H8.5L2.5 12l6 7H21z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M11.5 9l6 6M17.5 9l-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+    '␣': '<path d="M4 9v6h16V9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
+  };
+  var ICON_RE = /❚❚|[▶✓✕★☐☑⌫␣]/g;
+  function iconSvg(g) { return '<svg class="ico" viewBox="0 0 24 24" width="24" height="24"><title>' + g + '</title>' + ICONS[g] + '</svg>'; }
+  function escHtml(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function setText(e, text) {
+    text = String(text);
+    ICON_RE.lastIndex = 0;
+    if (!ICON_RE.test(text)) { e.textContent = text; return; }
+    var html = '', last = 0, m;
+    ICON_RE.lastIndex = 0;
+    while ((m = ICON_RE.exec(text))) { html += escHtml(text.slice(last, m.index)) + iconSvg(m[0]); last = m.index + m[0].length; }
+    e.innerHTML = html + escHtml(text.slice(last));
   }
   function each(arr, fn) { for (var i = 0; i < (arr ? arr.length : 0); i++) fn(arr[i], i); }
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
@@ -204,11 +229,14 @@
     while (p && p !== document.body) {
       var ov = window.getComputedStyle(p).overflow;
       if (ov === 'hidden' || ov === 'auto' || ov === 'scroll') {
+        // the page is scaled to the screen (fitScreen), so on-screen pixels
+        // are converted back to page pixels before scrolling
         var pr = p.getBoundingClientRect(), er = e.getBoundingClientRect();
-        if (er.left < pr.left) p.scrollLeft -= (pr.left - er.left) + 24;
-        else if (er.right > pr.right) p.scrollLeft += (er.right - pr.right) + 24;
-        if (er.top < pr.top) p.scrollTop -= (pr.top - er.top) + 20;
-        else if (er.bottom > pr.bottom) p.scrollTop += (er.bottom - pr.bottom) + 20;
+        var k = p.offsetWidth ? pr.width / p.offsetWidth : 1; if (!k) k = 1;
+        if (er.left < pr.left) p.scrollLeft -= (pr.left - er.left) / k + 24;
+        else if (er.right > pr.right) p.scrollLeft += (er.right - pr.right) / k + 24;
+        if (er.top < pr.top) p.scrollTop -= (pr.top - er.top) / k + 20;
+        else if (er.bottom > pr.bottom) p.scrollTop += (er.bottom - pr.bottom) / k + 20;
       }
       p = p.parentNode;
     }
@@ -618,7 +646,7 @@
         var on = !it.subscribed;
         site.post((on ? '/watchlist/subscribe/' : '/watchlist/unsubscribe/') + it.id, {}, function (err) {
           if (err) return;
-          it.subscribed = on; wl.textContent = on ? '✓ Я смотрю' : '+ Я смотрю';
+          it.subscribed = on; setText(wl, on ? '✓ Я смотрю' : '+ Я смотрю');
           toast(on ? 'Добавлено в «Я смотрю»' : 'Убрано из «Я смотрю»');
         });
       };
@@ -681,7 +709,7 @@
       b.onclick = function () {
         site.post('/favorites/change', { id: f.id, item_id: it.id }, function (err) {
           if (err) return;
-          f.on = !f.on; b.textContent = (f.on ? '☑ ' : '☐ ') + f.title;
+          f.on = !f.on; setText(b, (f.on ? '☑ ' : '☐ ') + f.title);
         });
       };
       buttons.push(b);
@@ -711,20 +739,78 @@
   var player = {
     ctx: null, hls: null, engine: '', osdTimer: null, markTimer: null, menuOpen: false, seekAcc: 0, seekTimer: null, lastSent: 0, completedSent: false,
 
+    /* Remote: the first key press only shows the panel (OK also pauses), focus on ▶/❚❚.
+       While the panel is shown the arrows move between its buttons (like the rest of
+       the app), OK presses the focused one; on the progress bar ←/→ = 10 s.
+       Media keys (play/pause, rewind, fast-forward) work at any time. */
     key: function (c) {
       if (isKey(c, KEY.BACK) || isKey(c, KEY.STOP)) { goBack(); return true; }
-      if (c === KEY.ENTER || isKey(c, KEY.PLAY) || isKey(c, KEY.PAUSE)) { player.togglePause(); return true; }
-      if (c === KEY.LEFT || isKey(c, KEY.REW)) { player.seek(-10); return true; }
-      if (c === KEY.RIGHT || isKey(c, KEY.FF)) { player.seek(10); return true; }
-      if (c === KEY.UP) { player.seek(60); return true; }
-      if (c === KEY.DOWN) { player.seek(-60); return true; }
-      if (c === KEY.RED || c === KEY.BLUE || c === KEY.YELLOW || c === KEY.GREEN || isKey(c, KEY.INFO) || isKey(c, KEY.MENU)) { player.openMenu(); return true; }
-      return false;
+      if (isKey(c, KEY.PLAY) || isKey(c, KEY.PAUSE)) { player.togglePause(); return true; }
+      if (isKey(c, KEY.REW)) { player.seek(-10); return true; }
+      if (isKey(c, KEY.FF)) { player.seek(10); return true; }
+      if (c === KEY.RED || c === KEY.GREEN || isKey(c, KEY.INFO)) { player.openMenu('subs'); return true; }
+      if (c === KEY.YELLOW || c === KEY.BLUE || isKey(c, KEY.MENU)) { player.openMenu('settings'); return true; }
+      if (c !== KEY.ENTER && c !== KEY.LEFT && c !== KEY.RIGHT && c !== KEY.UP && c !== KEY.DOWN) return false;
+      var osd = $('player-osd');
+      if (!player.osdShown() || !focused || !osd.contains(focused)) {
+        player.showOsd(6000);
+        focus($('ctl-play'));
+        if (c === KEY.ENTER) player.togglePause();
+        return true;
+      }
+      var onBar = focused === $('osd-bar');
+      if (c === KEY.LEFT) { if (onBar) player.seek(-10); else move('left'); }
+      else if (c === KEY.RIGHT) { if (onBar) player.seek(10); else move('right'); }
+      else if (c === KEY.UP) move('up');
+      else if (c === KEY.DOWN) move('down');
+      else if (c === KEY.ENTER) { if (onBar) player.togglePause(); else player.ctl(focused.getAttribute('data-ctl')); }
+      player.showOsd(6000);
+      return true;
+    },
+    osdShown: function () { return /\bshow\b/.test($('player-osd').className); },
+    /* what a panel button does (remote OK or a pointer click) */
+    ctl: function (c) {
+      if (c === 'back') return goBack();
+      if (c === 'rew') player.seek(-10);
+      else if (c === 'ff') player.seek(10);
+      else if (c === 'prev') player.jump(-1);
+      else if (c === 'next') player.jump(1);
+      else if (c === 'episodes') return player.openEpisodes();
+      else if (c === 'subs') return player.openMenu('subs');
+      else if (c === 'menu') return player.openMenu('settings');
+      else player.togglePause();
+    },
+    /* previous / next episode (next may go to the next season) */
+    jump: function (d) {
+      var c = player.ctx; if (!c) return;
+      if (d < 0) { if (c.index > 0) playEpisode(c.episodes, c.index - 1, null); return; }
+      nextEpisode(c, function (list, idx) { if (list) playEpisode(list, idx, null); else toast('Это последняя серия'); });
+    },
+    /* list of episodes of the current season / parts of the film */
+    openEpisodes: function () {
+      var c = player.ctx; if (!c) return;
+      var m = $('player-menu'); clear(m);
+      m.appendChild(el('h2', null, item.data && item.data.serial ? 'Сезон ' + c.ep.season : 'Части'));
+      var cur = null;
+      each(c.episodes, function (ep, i) {
+        var b = el('button', 'btn focusable' + (i === c.index ? ' on' : ''), (ep.watched ? '✓ ' : '') + ep.number + '. ' + (ep.title || 'Эпизод ' + ep.number));
+        b.onclick = function () { player.closeMenu(); if (i !== c.index) playEpisode(c.episodes, i, null); };
+        m.appendChild(b); if (i === c.index) cur = b;
+      });
+      player.showMenu(cur);
+    },
+    showMenu: function (first) {
+      var m = $('player-menu');
+      player.menuBack = focused;
+      m.className = 'player-menu show'; player.menuOpen = true;
+      var f = first || m.querySelector('.btn.on') || m.querySelector('.focusable');
+      focus(f);
+      if (f) { var top = f.offsetTop - 200; m.scrollTop = top > 0 ? top : 0; }
     },
     showOsd: function (ms) {
       $('player-osd').className = 'player-osd show';
       clearTimeout(player.osdTimer);
-      player.osdTimer = setTimeout(function () { if (!video.paused) $('player-osd').className = 'player-osd'; }, ms || 3000);
+      player.osdTimer = setTimeout(function () { if (!video.paused && !player.menuOpen) $('player-osd').className = 'player-osd'; }, ms || 3000);
     },
     msg: function (text) { var m = $('player-msg'); m.textContent = text || ''; m.className = 'player-msg' + (text ? ' show' : ''); },
     togglePause: function () { if (video.paused) video.play(); else { video.pause(); player.mark(true); } player.showOsd(); },
@@ -764,27 +850,41 @@
       player.destroy();
       player.ctx = ctx; player.lastSent = 0; player.completedSent = ctx.ep.watched;
       ctx.startTime = startTime || 0;
-      $('osd-title').textContent = ctx.title;
+      player.fillMeta(ctx);
       player.msg('Загрузка…');
       if (current !== 'player') showScreen('player');
       var want = engine || settings.engine;
-      if (want === 'native' || (want === 'auto' && nativeHls() && !ctx.preferHlsJs)) return player.startNative();
+      if (want === 'native' || (want === 'auto' && ctx.triedHlsJs)) return player.startNative();
       loadHlsJs(function (ok) {
         if (player.ctx !== ctx) return;
         if (ok && hlsJsOk()) player.startHlsJs();
         else player.startNative();
       });
     },
+    fillMeta: function (ctx) {
+      var it = item.data || {}, ep = ctx.ep, pad = function (n) { return (n < 10 ? '0' : '') + n; };
+      $('osd-title').textContent = it.title || ctx.title;
+      $('osd-orig').textContent = it.orig || '';
+      $('osd-year').textContent = it.info ? (infoValue(it, 'Год') || '').replace(/\D.*$/, '') : '';
+      $('osd-ep').textContent = it.serial ? 'S' + pad(ep.season) + 'E' + pad(ep.number) + (ep.title ? ' · ' + ep.title : '') : (ctx.episodes.length > 1 ? 'Часть ' + ep.number : '');
+      var img = $('osd-poster'); if (it.poster) { img.src = it.poster; img.style.display = ''; } else img.style.display = 'none';
+      var many = it.serial || ctx.episodes.length > 1;
+      each(['ctl-prev', 'ctl-next', 'ctl-episodes'], function (id) { $(id).className = 'ctl focusable' + (many ? '' : ' hidden-ctl'); });
+      if (many && ctx.index === 0) $('ctl-prev').className += ' hidden-ctl';
+    },
     startNative: function () {
       var c = player.ctx; player.engine = 'native'; c.triedNative = true;
-      $('osd-info').textContent = '  [встроенный плеер]';
+      $('osd-info').textContent = 'встроенный плеер';
       video.src = c.ep.manifest;
       video.load();
       player.afterLoad();
+      var again = function () { if (player.ctx === c && player.engine === 'native') player.applySubs(); };
+      try { if (video.textTracks && video.textTracks.addEventListener) video.textTracks.addEventListener('addtrack', again); } catch (e) {}
+      each([1000, 3000, 8000], function (ms) { setTimeout(again, ms); });
     },
     startHlsJs: function () {
       var c = player.ctx; player.engine = 'hls.js'; c.triedHlsJs = true;
-      $('osd-info').textContent = '  [hls.js]';
+      $('osd-info').textContent = 'hls.js';
       var hls = new window.Hls({ startPosition: c.startTime > 0 ? c.startTime : -1, maxBufferLength: 60, capLevelToPlayerSize: false });
       player.hls = hls;
       hls.on(window.Hls.Events.ERROR, function (ev, data) {
@@ -818,7 +918,7 @@
       var c = player.ctx; if (!c) return;
       var t = video.currentTime || c.startTime;
       if (player.engine === 'hls.js' && !c.triedNative) { toast('hls.js не смог (' + why + '), пробую встроенный плеер', 4000); return player.start(c, t, 'native'); }
-      if (player.engine === 'native' && !c.triedHlsJs && settings.engine !== 'native') { toast('Встроенный плеер не смог, пробую hls.js', 4000); c.preferHlsJs = true; return player.start(c, t, 'hlsjs'); }
+      if (player.engine === 'native' && !c.triedHlsJs && settings.engine !== 'native') { toast('Встроенный плеер не смог, пробую hls.js', 4000); return player.start(c, t, 'hlsjs'); }
       player.msg('Не удалось воспроизвести (' + why + ')');
     },
     destroy: function () {
@@ -882,9 +982,10 @@
       return out;
     },
 
-    openMenu: function () {
+    openMenu: function (mode) {
       var m = $('player-menu'); clear(m);
       var c = player.ctx; if (!c) return;
+      var subsMode = mode !== 'settings';
       function section(title, list, onPick) {
         if (!list.length) return;
         m.appendChild(el('h2', null, title));
@@ -894,15 +995,16 @@
           m.appendChild(b);
         });
       }
-      var audio = player.audioList();
+      var audio = subsMode ? player.audioList() : [];
       if (audio.length > 1) section('Звук', audio, function (x) { settings.audio = x.name; settings.audioLang = x.lang; saveSettings(); });
-      else if (player.engine === 'native') m.appendChild(el('h2', null, 'Звук: дорожки недоступны во встроенном плеере — переключите на hls.js ниже'));
-      var subs = player.subsList();
+      else if (subsMode && player.engine === 'native') m.appendChild(el('h2', null, 'Звук: дорожки недоступны во встроенном плеере (Настройки → Плеер: hls.js)'));
+      var subs = subsMode ? player.subsList() : [];
       subs = subs.map(function (x, i) { x.i = i; return x; }).sort(function (a, b) { return subsRank(a) - subsRank(b) || a.i - b.i; });
       if (subs.length) {
         subs.unshift({ name: 'Выключены', on: settings.subs === 'off', pick: function () { player.subsOff(); }, off: true });
         section('Субтитры', subs, function (x) { settings.subs = x.off ? 'off' : x.name; saveSettings(); });
       }
+      if (subsMode) { if (!m.firstChild) m.appendChild(el('h2', null, 'Нет дорожек и субтитров')); return player.showMenu(); }
       section('Качество', player.qualityList());
       m.appendChild(el('h2', null, 'Плеер: ' + player.engine));
       var other = player.engine === 'native' ? 'hlsjs' : 'native';
@@ -912,10 +1014,13 @@
       var mk = el('button', 'btn focusable', c.ep.watched ? 'Снять отметку «просмотрено»' : 'Отметить как просмотренное');
       mk.onclick = function () { player.markWatched(!c.ep.watched); toast(c.ep.watched ? 'Отмечено как просмотренное' : 'Отметка снята'); player.closeMenu(); };
       m.appendChild(mk);
-      m.className = 'player-menu show'; player.menuOpen = true;
-      focus(m.querySelector('.btn.on') || m.querySelector('.focusable'));
+      player.showMenu();
     },
-    closeMenu: function () { $('player-menu').className = 'player-menu'; player.menuOpen = false; }
+    closeMenu: function () {
+      if (!player.menuOpen) return;
+      $('player-menu').className = 'player-menu'; player.menuOpen = false;
+      if (player.menuBack && current === 'player') { focus(player.menuBack); player.showOsd(6000); }
+    }
   };
   /* Mouse / pointer mode (the TV browser turns the remote into a cursor and OK into
      a click): click on the picture = pause, on-screen buttons, click on the bar = seek. */
@@ -930,17 +1035,11 @@
       player.showOsd(); return;
     }
     var c = t && t.getAttribute ? t.getAttribute('data-ctl') : null;
-    if (c === 'back') goBack();
-    else if (c === 'rew') player.seek(-10);
-    else if (c === 'ff') player.seek(10);
-    else if (c === 'rew60') player.seek(-60);
-    else if (c === 'ff60') player.seek(60);
-    else if (c === 'menu') player.openMenu();
-    else player.togglePause();
-    player.showOsd(4000);
+    player.ctl(c);
+    if (current === 'player' && !player.menuOpen) player.showOsd(4000);
   });
   $('screen-player').addEventListener('mousemove', function () { if (current === 'player' && !player.menuOpen) player.showOsd(3000); });
-  function updatePlayBtn() { $('ctl-play').textContent = video.paused ? '▶' : '❚❚'; }
+  function updatePlayBtn() { each([$('ctl-play'), $('ctl-play2')], function (b) { setText(b, video.paused ? '▶' : '❚❚'); }); }
   video.addEventListener('play', updatePlayBtn);
   video.addEventListener('pause', updatePlayBtn);
   video.addEventListener('timeupdate', player.updateOsd);
@@ -979,7 +1078,7 @@
     if (!ep.manifest) { toast('Нет ссылки на видео'); return; }
     var title = it.title + (it.serial ? ' — S' + ep.season + 'E' + ep.number + (ep.title ? ' «' + ep.title + '»' : '') : (list.length > 1 ? ' — часть ' + ep.number : ''));
     var t = from != null ? from : ((!ep.watched && ep.time > 30 && (!ep.duration || ep.time < ep.duration - 60)) ? ep.time : 0);
-    if (t > 0) toast('Продолжаю с ' + fmtTime(t) + ' (↓ — назад на минуту)', 4000);
+    if (t > 0) toast('Продолжаю с ' + fmtTime(t), 4000);
     player.start({ episodes: list, index: idx, ep: ep, title: title }, t);
   }
 
@@ -999,7 +1098,7 @@
     var box = $('settings-box'); clear(box);
     box.appendChild(el('h1', null, 'Настройки'));
     box.appendChild(el('h2', null, 'Плеер'));
-    each([['auto', 'Авто'], ['native', 'Встроенный в ТВ'], ['hlsjs', 'hls.js (дорожки, субтитры, качество)']], function (s) {
+    each([['auto', 'Авто (hls.js, при сбое встроенный)'], ['native', 'Встроенный в ТВ'], ['hlsjs', 'Только hls.js']], function (s) {
       var b = el('button', 'btn focusable' + (settings.engine === s[0] ? ' on' : ''), s[1]);
       b.onclick = function () { settings.engine = s[0]; saveSettings(); openSettings(); };
       box.appendChild(b);
@@ -1086,6 +1185,8 @@
   }
   fitScreen();
   window.addEventListener('resize', fitScreen);
+
+  updatePlayBtn();
 
   /* ---------- boot ---------- */
   function boot() {

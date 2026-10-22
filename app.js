@@ -917,6 +917,32 @@
     },
     closeMenu: function () { $('player-menu').className = 'player-menu'; player.menuOpen = false; }
   };
+  /* Mouse / pointer mode (the TV browser turns the remote into a cursor and OK into
+     a click): click on the picture = pause, on-screen buttons, click on the bar = seek. */
+  $('screen-player').addEventListener('click', function (ev) {
+    var t = ev.target;
+    if ($('player-menu').contains(t)) return;           // menu buttons handle themselves
+    if (player.menuOpen) { player.closeMenu(); return; }
+    while (t && t !== this && !(t.getAttribute && t.getAttribute('data-ctl')) && t.id !== 'osd-bar') t = t.parentNode;
+    if (t && t.id === 'osd-bar') {
+      var r = t.getBoundingClientRect();
+      if (video.duration) { video.currentTime = Math.max(0, Math.min(video.duration - 2, (ev.clientX - r.left) / r.width * video.duration)); }
+      player.showOsd(); return;
+    }
+    var c = t && t.getAttribute ? t.getAttribute('data-ctl') : null;
+    if (c === 'back') goBack();
+    else if (c === 'rew') player.seek(-10);
+    else if (c === 'ff') player.seek(10);
+    else if (c === 'rew60') player.seek(-60);
+    else if (c === 'ff60') player.seek(60);
+    else if (c === 'menu') player.openMenu();
+    else player.togglePause();
+    player.showOsd(4000);
+  });
+  $('screen-player').addEventListener('mousemove', function () { if (current === 'player' && !player.menuOpen) player.showOsd(3000); });
+  function updatePlayBtn() { $('ctl-play').textContent = video.paused ? '▶' : '❚❚'; }
+  video.addEventListener('play', updatePlayBtn);
+  video.addEventListener('pause', updatePlayBtn);
   video.addEventListener('timeupdate', player.updateOsd);
   video.addEventListener('waiting', function () { player.msg('Буферизация…'); });
   video.addEventListener('playing', function () { player.msg(''); });

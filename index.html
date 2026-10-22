@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=1920, height=1080, user-scalable=no">
   <title>KinoPub</title>
   <link rel="icon" href="icon.png">
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
   <!-- Вход: логин и пароль от kino.watch -->
@@ -104,8 +104,17 @@
     <video id="video" preload="auto"></video>
     <div class="player-osd" id="player-osd">
       <div class="osd-title" id="osd-title"></div>
-      <div class="osd-bar"><div class="osd-fill" id="osd-fill"></div></div>
+      <div class="osd-bar" id="osd-bar"><div class="osd-fill" id="osd-fill"></div></div>
       <div class="osd-time"><span id="osd-cur">0:00</span> / <span id="osd-dur">0:00</span> <span id="osd-info"></span></div>
+      <div class="osd-controls" id="osd-controls">
+        <button class="ctl" data-ctl="back" title="Выход">✕</button>
+        <button class="ctl" data-ctl="rew60" title="−1 мин">−1:00</button>
+        <button class="ctl" data-ctl="rew" title="−10 с">−10</button>
+        <button class="ctl big" data-ctl="play" id="ctl-play" title="Пауза">❚❚</button>
+        <button class="ctl" data-ctl="ff" title="+10 с">+10</button>
+        <button class="ctl" data-ctl="ff60" title="+1 мин">+1:00</button>
+        <button class="ctl wide" data-ctl="menu" title="Звук, субтитры, качество">Звук · Субтитры</button>
+      </div>
       <div class="osd-hint">OK — пауза · ←/→ 10 с · ↑/↓ 1 мин · цветные кнопки или Info — звук, субтитры, качество</div>
     </div>
     <div class="player-menu" id="player-menu"></div>
@@ -120,8 +129,8 @@
   <div id="toast" class="toast"></div>
   <div id="loader" class="loader">Загрузка…</div>
 
-  <script src="config.js?v=8"></script>
-  <script src="parser.js?v=8"></script>
-  <script src="app.js?v=8"></script>
+  <script src="config.js?v=9"></script>
+  <script src="parser.js?v=9"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

@@ -1022,6 +1022,12 @@
     var ex = el('button', 'btn focusable', 'Выход из приложения');
     ex.onclick = exitApp;
     box.appendChild(ex);
+    box.appendChild(el('h2', null, 'Плитка KinoPub на главном экране ТВ'));
+    var ti = el('button', 'btn focusable', 'Установить плитку');
+    var tiOut = el('div', 'info', tvApiReport());
+    ti.onclick = function () { installTile(tiOut); };
+    box.appendChild(ti);
+    box.appendChild(tiOut);
     var mse = !!(window.MediaSource || window.WebKitMediaSource);
     box.appendChild(el('div', 'info',
       'Прокси: ' + PROXY + '\n' +
@@ -1031,6 +1037,43 @@
       ' · audioTracks: ' + (video.audioTracks ? 'да' : 'нет') + '\n' +
       'Последние кнопки пульта (keyCode): ' + lastKeys.join(', ')));
     showScreen('settings');
+  }
+
+  /* ---------- tile on the TV home screen (VIDAA browser API) ---------- */
+  var TILE_ID = 'KinoPubdebug';
+  function tvCall(name) { try { var f = window[name]; return typeof f === 'function' ? String(f()) : '—'; } catch (e) { return 'ошибка: ' + e; } }
+  function tvApiReport() {
+    var names = [];
+    try { for (var k in window) if (/^(Hisense|omi_|opera_omi|vowOS|hisense)/.test(k)) names.push(k); } catch (e) {}
+    return 'Модель: ' + tvCall('Hisense_GetModelName') + ' · прошивка: ' + tvCall('Hisense_GetFirmWareVersion') +
+      ' · страна: ' + tvCall('Hisense_GetCountryCode') + '\n' +
+      'Hisense_installApp: ' + (typeof window.Hisense_installApp) + ' · omi_platform: ' + (typeof window.omi_platform) +
+      ' · opera_omi: ' + (typeof window.opera_omi) + '\n' +
+      'Функции ТВ: ' + (names.length ? names.sort().join(', ') : 'не найдены');
+  }
+  function refreshTvApps(id) {
+    var m = { type: 'APPMessage', MsgType: 'appControl', action: 'updateAppState', source: 'browser', startAppType: 2,
+      param: { event: 'AllAppsUpdate', SubModuleName: 'AllApps', startFrom: '', appInfo: id } };
+    try { if (window.omi_platform) window.omi_platform.sendPlatformMessage(JSON.stringify(m));
+      else if (window.opera_omi) window.opera_omi.sendPlatformMessage(JSON.stringify(m)); } catch (e) {}
+  }
+  function installTile(out) {
+    var base = location.href.replace(/[?#].*$/, '').replace(/[^\/]*$/, '');
+    var icon = base + 'icon.png';
+    var say = function (t) { out.textContent = t + '\n\n' + tvApiReport(); toast(t, 6000); };
+    if (typeof window.Hisense_installApp !== 'function') {
+      return say('Телевизор не даёт этой странице устанавливать плитки (Hisense_installApp недоступна).');
+    }
+    say('Устанавливаю…');
+    var answered = false;
+    setTimeout(function () { if (!answered) say('Телевизор не ответил за 15 секунд. Проверьте конец списка приложений.'); }, 15000);
+    try {
+      window.Hisense_installApp(TILE_ID, 'KinoPub', icon, icon, icon, base, 'store', function (status) {
+        answered = true;
+        if (status) say('Телевизор отказал в установке (код ' + status + ').');
+        else { refreshTvApps(TILE_ID); say('Готово: плитка KinoPub добавлена. Она в конце списка приложений.'); }
+      });
+    } catch (e) { answered = true; say('Ошибка при вызове установки: ' + e); }
   }
 
   /* ---------- scale 1920x1080 to the real screen ---------- */

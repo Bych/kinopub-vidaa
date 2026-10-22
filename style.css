@@ -101,7 +101,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: def
 .settings-box h1 { font-size: 48px; margin-bottom: 30px; }
 .settings-box h2 { font-size: 30px; color: #aab; margin: 24px 0 10px; }
 .settings-box .btn { margin-right: 12px; margin-bottom: 10px; }
-.settings-box .info { color: #8a8fa3; font-size: 24px; margin-top: 20px; line-height: 34px; }
+.settings-box .info { color: #8a8fa3; font-size: 24px; margin-top: 20px; line-height: 34px; white-space: pre-line; }
 
 /* misc */
 .toast { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); background: #1e2330; padding: 16px 32px; border-radius: 12px; font-size: 28px; display: none; z-index: 10; }

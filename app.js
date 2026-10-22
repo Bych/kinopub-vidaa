@@ -291,56 +291,91 @@
       if (keepIdx >= 0) { var keys = box.querySelectorAll('.key'); focus(keys[Math.min(keepIdx, keys.length - 1)]); }
     }
     draw(false);
-    return { redraw: draw };
+    return { redraw: draw, setLayout: function (n) { if (LAYOUTS[n] && state.layout !== n) { state.layout = n; draw(false); } } };
   }
 
   /* ---------- login ---------- */
+  /* Two steps. 1: login + password. The site then usually e-mails a code,
+     because to the site the Worker is a new device; the Worker answers
+     need:'code' with a "pending" string (the half-finished site session).
+     2: the code from the e-mail + pending. */
   var loginForm = {
-    user: store.get('login', ''), pass: '', field: 'user', show: false, osk: null, busy: false,
+    user: store.get('login', ''), pass: '', code: '', pending: null, field: 'user', show: false, osk: null, busy: false,
     render: function () {
+      var codeStep = !!loginForm.pending;
       $('login-user').querySelector('.field-value').textContent = loginForm.user + (loginForm.field === 'user' ? '|' : '');
       var p = loginForm.show ? loginForm.pass : new Array(loginForm.pass.length + 1).join('•');
       $('login-pass').querySelector('.field-value').textContent = p + (loginForm.field === 'pass' ? '|' : '');
-      $('login-user').className = 'field focusable' + (loginForm.field === 'user' ? ' active' : '') + (focused === $('login-user') ? ' focus' : '');
-      $('login-pass').className = 'field focusable' + (loginForm.field === 'pass' ? ' active' : '') + (focused === $('login-pass') ? ' focus' : '');
+      $('login-code').querySelector('.field-value').textContent = loginForm.code + (loginForm.field === 'code' ? '|' : '');
+      each(['user', 'pass', 'code'], function (f) {
+        var e = $('login-' + f);
+        var hide = codeStep ? f !== 'code' : f === 'code';
+        e.className = 'field focusable' + (hide ? ' hidden' : '') + (loginForm.field === f ? ' active' : '') + (focused === e ? ' focus' : '');
+      });
+      $('login-show').className = 'btn focusable' + (codeStep ? ' hidden' : '');
+      $('login-resend').className = 'btn focusable' + (codeStep ? '' : ' hidden');
       $('login-show').textContent = loginForm.show ? 'Скрыть пароль' : 'Показать пароль';
+      $('login-go').textContent = codeStep ? 'Подтвердить' : 'Войти';
     },
     type: function (ch) {
       var f = loginForm.field;
       if (ch === 'BS') loginForm[f] = loginForm[f].slice(0, -1);
       else if (ch === 'CLR') loginForm[f] = '';
       else if (ch === 'OK') { if (f === 'user') { loginForm.field = 'pass'; } else return loginForm.submit(); }
+      else if (f === 'code' && !/[0-9A-Za-z]/.test(ch)) return;
       else loginForm[f] += ch;
       loginForm.render();
     },
-    submit: function () {
+    reset: function () { loginForm.pending = null; loginForm.code = ''; loginForm.field = loginForm.user ? 'pass' : 'user'; },
+    submit: function (resend) {
       if (loginForm.busy) return;
-      if (!loginForm.user || !loginForm.pass) { $('login-status').textContent = 'Введите логин и пароль'; return; }
+      var params;
+      if (loginForm.pending) {
+        if (!resend && !loginForm.code) { $('login-status').textContent = 'Введите код из письма'; return; }
+        params = resend ? { pending: loginForm.pending, resend: '1' } : { pending: loginForm.pending, code: loginForm.code };
+      } else {
+        if (!loginForm.user || !loginForm.pass) { $('login-status').textContent = 'Введите логин и пароль'; return; }
+        params = { login: loginForm.user, password: loginForm.pass };
+      }
       loginForm.busy = true;
-      $('login-status').textContent = 'Вхожу…';
-      http('POST', PROXY + '/site/login', qs({ login: loginForm.user, password: loginForm.pass }), { 'Content-Type': 'application/x-www-form-urlencoded' }, function (st, text) {
+      $('login-status').textContent = resend ? 'Прошу новый код…' : 'Вхожу…';
+      http('POST', PROXY + '/site/login', qs(params), { 'Content-Type': 'application/x-www-form-urlencoded' }, function (st, text) {
         loginForm.busy = false;
         var d = null; try { d = JSON.parse(text); } catch (e) {}
+        window.KP_LAST_LOGIN = d && { ok: d.ok, need: d.need, error: d.error, detail: d.detail }; // diagnostics, no secrets
         if (d && d.ok && d.session) {
           auth.session = d.session; auth.user = d.user || '';
           store.set('session', d.session); store.set('user', auth.user); store.set('login', loginForm.user);
-          loginForm.pass = ''; loginForm.render();
+          loginForm.pass = ''; loginForm.reset(); loginForm.render();
           $('login-status').textContent = '';
           homeLoaded = false; openHome();
           return;
         }
+        if (d && d.need === 'code' && d.pending) {
+          var first = !loginForm.pending;
+          loginForm.pending = d.pending; loginForm.pass = '';
+          if (!resend) loginForm.code = '';
+          loginForm.field = 'code';
+          loginForm.render();
+          $('login-status').textContent = d.error || (first ? 'Сайт отправил код на вашу почту — введите его' : 'Введите код из письма');
+          if (first) { loginForm.osk.setLayout('en'); focus($('login-osk').querySelector('.key')); }
+          return;
+        }
+        if (d && /устарела/.test(d.error || '')) { loginForm.reset(); loginForm.render(); }
         $('login-status').textContent = st === 0 ? ('Прокси недоступен: ' + PROXY) : ((d && d.error) || ('Ошибка входа, HTTP ' + st));
       });
     }
   };
-  $('login-user').onclick = function () { loginForm.field = 'user'; loginForm.render(); focus(loginForm.osk && $('login-osk').querySelector('.key')); };
+  $('login-user').onclick = function () { loginForm.field = 'user'; loginForm.render(); focus($('login-osk').querySelector('.key')); };
   $('login-pass').onclick = function () { loginForm.field = 'pass'; loginForm.render(); focus($('login-osk').querySelector('.key')); };
+  $('login-code').onclick = function () { loginForm.field = 'code'; loginForm.render(); focus($('login-osk').querySelector('.key')); };
   $('login-show').onclick = function () { loginForm.show = !loginForm.show; loginForm.render(); };
-  $('login-go').onclick = loginForm.submit;
+  $('login-resend').onclick = function () { loginForm.submit(true); };
+  $('login-go').onclick = function () { loginForm.submit(false); };
   function openLogin() {
     stack = [];
     if (!loginForm.osk) loginForm.osk = Keyboard($('login-osk'), ['en', 'EN', 'sym', 'ru'], loginForm.type, 'Далее');
-    loginForm.field = loginForm.user ? 'pass' : 'user';
+    loginForm.reset();
     showScreen('login', false);
     loginForm.render();
     focus($('login-osk').querySelector('.key'));

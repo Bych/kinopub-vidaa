@@ -618,10 +618,10 @@
     var status = it.serial ? [infoValue(it, 'Статус'), infoValue(it, 'Добавлен') ? 'добавлен ' + infoValue(it, 'Добавлен') : ''].filter(function (x) { return x; }).join(', ') : '';
     if (status) badges.appendChild(el('span', 'chip muted', status));
     $('item-plot').textContent = it.plot;
-    var cast = infoValue(it, 'В ролях'), castBox = $('item-cast'); clear(castBox);
-    if (cast) { castBox.appendChild(el('span', 'item-cast-k', 'В ролях: ')); castBox.appendChild(document.createTextNode(cast)); }
-    var dir = infoValue(it, 'Режисс');
-    if (dir) { castBox.appendChild(el('br')); castBox.appendChild(el('span', 'item-cast-k', 'Режиссёр: ')); castBox.appendChild(document.createTextNode(dir)); }
+    // director first: a long cast list is cut after 3 lines, the director must stay visible
+    var cast = infoValue(it, 'В ролях'), dir = infoValue(it, 'Режисс'), castBox = $('item-cast'); clear(castBox);
+    if (dir) { castBox.appendChild(el('span', 'item-cast-k', 'Режиссёр: ')); castBox.appendChild(document.createTextNode(dir)); }
+    if (cast) { if (dir) castBox.appendChild(el('br')); castBox.appendChild(el('span', 'item-cast-k', 'В ролях: ')); castBox.appendChild(document.createTextNode(cast)); }
     var simBox = $('item-similar'), simRow = $('item-similar-row'); clear(simRow); simRow.kpSeen = {}; simRow.scrollLeft = 0;
     simBox.style.display = it.similar && it.similar.length ? '' : 'none';
     fill(simRow, it.similar || [], null);

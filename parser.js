@@ -182,6 +182,12 @@
       return { id: attr(a, 'data-id'), title: txt(a), on: !!a.querySelector('.fa-check-square') };
     });
 
+    /* "Похожие" at the bottom of the page: .iv-similar-card (poster, title, "год · ★ рейтинг") */
+    var similar = toArr(d.querySelectorAll('.iv-similar-card')).map(function (c) {
+      var a = c.querySelector('a[href*="/item/view/"]'), sid = itemId(attr(a, 'href'));
+      return { id: sid, title: txt(c.querySelector('.iv-similar-title')) || attr(c.querySelector('img'), 'alt'), orig: '', poster: posterUrl('', sid), badge: '', meta: txt(c.querySelector('.iv-similar-meta')) };
+    }).filter(function (x) { return x.id && x.id !== (parseInt(id, 10) || 0); });
+
     var isSerial = false;
     each(seasons, function (s) { if (s.season > 0) isSerial = true; });
     var eps = []; each(playlist, function (e) { eps.push(episode(e)); });
@@ -199,7 +205,8 @@
       episodes: eps,                       // episodes of currentSeason (or parts of a movie)
       startIndex: typeof startIndex === 'number' ? startIndex : -1, // episode the site would continue with
       subscribed: sub ? attr(sub, 'data-subscribed') === '1' : null,
-      favorites: favs
+      favorites: favs,
+      similar: similar
     };
   }
   /* Table cell text; rating icons (IMDb / Кинопоиск) become labels. */

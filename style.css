@@ -229,3 +229,14 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: def
 .osd-panel { display: flex; align-items: center; line-height: normal; }
 .osd-panel .osd-time { margin-left: 24px; }
 .osd-right { float: none; margin-left: auto; }
+
+/* new-episodes badge: top right, like on kino.watch */
+.tile .badge { left: auto; right: 0; top: 0; margin: 8px; padding: 2px 10px; border-radius: 12px; font-weight: bold; }
+.tile .tile-meta { font-size: 20px; color: #8a8fa3; margin-top: 2px; }
+/* item page: cast and "Похожие" */
+.item-cast { font-size: 24px; line-height: 34px; color: #c9ccd8; max-height: 102px; overflow: hidden; margin: -8px 0 22px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.item-cast-k { color: #8a8fa3; }
+.item-info { padding-bottom: 40px; }
+.episodes { height: auto; max-height: 440px; }
+.item-similar { margin-top: 26px; }
+.item-similar .row-items { height: 460px; }

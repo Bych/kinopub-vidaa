@@ -174,6 +174,7 @@
     if (!e) return;
     if (focused && focused.classList) focused.classList.remove('focus');
     focused = e; e.classList.add('focus');
+    if (current === 'item' && $('item-actions').contains(e)) $('item-info').scrollTop = 0;   // back at the top: show the title again
     scrollIntoView(e);
   }
   function scopeRoot() { return overlay.open ? overlay.node : (current === 'player' && player.menuOpen ? $('player-menu') : screens[current]); }
@@ -429,8 +430,9 @@
   function tile(it) {
     var t = el('div', 'tile focusable');
     var img = el('img'); img.src = it.poster; img.alt = ''; t.appendChild(img);
-    if (it.badge) t.appendChild(el('span', 'badge', '+' + it.badge));
+    if (it.badge) t.appendChild(el('span', 'badge', it.badge));   // new episodes, top right like on the site
     t.appendChild(el('div', 'tile-title', it.title));
+    if (it.meta) t.appendChild(el('div', 'tile-meta', it.meta));
     t.onclick = function () { openItem(it.id); };
     return t;
   }
@@ -616,6 +618,14 @@
     var status = it.serial ? [infoValue(it, 'Статус'), infoValue(it, 'Добавлен') ? 'добавлен ' + infoValue(it, 'Добавлен') : ''].filter(function (x) { return x; }).join(', ') : '';
     if (status) badges.appendChild(el('span', 'chip muted', status));
     $('item-plot').textContent = it.plot;
+    var cast = infoValue(it, 'В ролях'), castBox = $('item-cast'); clear(castBox);
+    if (cast) { castBox.appendChild(el('span', 'item-cast-k', 'В ролях: ')); castBox.appendChild(document.createTextNode(cast)); }
+    var dir = infoValue(it, 'Режисс');
+    if (dir) { castBox.appendChild(el('br')); castBox.appendChild(el('span', 'item-cast-k', 'Режиссёр: ')); castBox.appendChild(document.createTextNode(dir)); }
+    var simBox = $('item-similar'), simRow = $('item-similar-row'); clear(simRow); simRow.kpSeen = {}; simRow.scrollLeft = 0;
+    simBox.style.display = it.similar && it.similar.length ? '' : 'none';
+    fill(simRow, it.similar || [], null);
+    $('item-info').scrollTop = 0;
 
     var actions = $('item-actions'); clear(actions);
     var seasons = $('item-seasons'); clear(seasons);

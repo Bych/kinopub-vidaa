@@ -68,7 +68,8 @@
     clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.className = 'toast'; }, ms || 2500);
   }
   var loading = 0;
-  function loader(on) { loading += on ? 1 : -1; if (loading < 0) loading = 0; $('loader').className = 'loader' + (loading ? ' show' : ''); }
+  /* "Загрузка…" in the top-right corner; never over the video (progress saves every 30 s would make it blink) */
+  function loader(on) { loading += on ? 1 : -1; if (loading < 0) loading = 0; $('loader').className = 'loader' + (loading && current !== 'player' ? ' show' : ''); }
 
   /* ---------- storage ---------- */
   var store = {
@@ -152,6 +153,7 @@
     }
     current = name;
     screens[name].className = 'screen active';
+    $('loader').className = 'loader' + (loading && name !== 'player' ? ' show' : '');
     var f = lastFocus[name];
     if (f && document.body.contains(f) && (f.offsetWidth || f.offsetHeight)) focus(f); else focusFirst();
   }

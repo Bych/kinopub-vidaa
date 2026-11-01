@@ -1,4 +1,4 @@
-/* KinoPub for Hisense VIDAA — site mode (login + password, no API keys).
+/* Kinowatch (kino.watch) for Hisense VIDAA — site mode (login + password, no API keys).
  * ES5 only: the TV browser engine is old (no arrow functions, let/const,
  * template strings). Data comes from kino.watch pages through the Worker
  * (see worker/worker.js) and is parsed by parser.js (window.KP_PARSE).
@@ -621,8 +621,10 @@
     if (status) badges.appendChild(el('span', 'chip muted', status));
     $('item-plot').textContent = it.plot;
     // director first: a long cast list is cut after 3 lines, the director must stay visible
-    var cast = infoValue(it, 'В ролях'), dir = infoValue(it, 'Режисс'), castBox = $('item-cast'); clear(castBox);
-    if (dir) { castBox.appendChild(el('span', 'item-cast-k', 'Режиссёр: ')); castBox.appendChild(document.createTextNode(dir)); }
+    // (serials often have only "Создатель")
+    var cast = infoValue(it, 'В ролях'), dir = infoValue(it, 'Режисс'), dirK = 'Режиссёр: ', castBox = $('item-cast'); clear(castBox);
+    if (!dir) { dir = infoValue(it, 'Создатель'); dirK = 'Создатель: '; }
+    if (dir) { castBox.appendChild(el('span', 'item-cast-k', dirK)); castBox.appendChild(document.createTextNode(dir)); }
     if (cast) { if (dir) castBox.appendChild(el('br')); castBox.appendChild(el('span', 'item-cast-k', 'В ролях: ')); castBox.appendChild(document.createTextNode(cast)); }
     var simBox = $('item-similar'), simRow = $('item-similar-row'); clear(simRow); simRow.kpSeen = {}; simRow.scrollLeft = 0;
     simBox.style.display = it.similar && it.similar.length ? '' : 'none';
@@ -1133,7 +1135,7 @@
     var ex = el('button', 'btn focusable', 'Выход из приложения');
     ex.onclick = exitApp;
     box.appendChild(ex);
-    box.appendChild(el('h2', null, 'Плитка KinoPub на главном экране ТВ'));
+    box.appendChild(el('h2', null, 'Плитка Kinowatch на главном экране ТВ'));
     var ti = el('button', 'btn focusable', 'Установить плитку');
     var tiOut = el('div', 'info', tvApiReport());
     ti.onclick = function () { installTile(tiOut); };
@@ -1151,7 +1153,7 @@
   }
 
   /* ---------- tile on the TV home screen (VIDAA browser API) ---------- */
-  var TILE_ID = 'KinoPubdebug';
+  var TILE_ID = 'Kinowatchdebug';
   function tvCall(name) { try { var f = window[name]; return typeof f === 'function' ? String(f()) : '—'; } catch (e) { return 'ошибка: ' + e; } }
   function tvApiReport() {
     var names = [];
@@ -1179,10 +1181,10 @@
     var answered = false;
     setTimeout(function () { if (!answered) say('Телевизор не ответил за 15 секунд. Проверьте конец списка приложений.'); }, 15000);
     try {
-      window.Hisense_installApp(TILE_ID, 'KinoPub', icon, icon, icon, base, 'store', function (status) {
+      window.Hisense_installApp(TILE_ID, 'Kinowatch', icon, icon, icon, base, 'store', function (status) {
         answered = true;
         if (status) say('Телевизор отказал в установке (код ' + status + ').');
-        else { refreshTvApps(TILE_ID); say('Готово: плитка KinoPub добавлена. Она в конце списка приложений.'); }
+        else { refreshTvApps(TILE_ID); say('Готово: плитка Kinowatch добавлена. Она в конце списка приложений.'); }
       });
     } catch (e) { answered = true; say('Ошибка при вызове установки: ' + e); }
   }

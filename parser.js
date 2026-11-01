@@ -1,4 +1,5 @@
-/* KinoPub for VIDAA — parsing of kino.watch HTML pages. ES5 only.
+/* Kinowatch for VIDAA — parsing of kino.watch HTML pages. ES5 only.
+ * Supports the new site design (01.11.2026: kp-* classes, Bootstrap 5) and the old one.
  *
  * Every function takes a parsed HTML Document (see KP_PARSE.doc) and returns
  * plain objects. All knowledge about the site's markup lives in this file, so
@@ -51,6 +52,7 @@
       if (!id) return;
       var c = byId[id];
       if (!c) { c = byId[id] = { id: id, title: '', orig: '', poster: '', badge: '' }; out.push(c); }
+      if (newCard(a, c, scope)) return;
       var img = a.querySelector('img');
       if (img && !c.poster) c.poster = posterUrl(attr(img, 'src') || attr(img, 'data-src'), 0);
       var t = attr(a, 'title') || txt(a) || (img ? attr(img, 'alt') : '');
@@ -71,6 +73,41 @@
     return out;
   }
 
+  /* New design. Two card types:
+     a.kp-poster (home strips, catalog, watchlist, "Похожие"): .kp-poster-title, .kp-poster-sub,
+       b.kp-badge = new episodes, .kp-rating pills (Кинопоиск / IMDb);
+     .kp-item-row (history, search, bookmark folders): .kp-item-row-name a, .kp-item-row-sub.
+     Returns true when the link belongs to such a card. */
+  function newCard(a, c, scope) {
+    var box = hasClass(a, 'kp-poster') ? a : closest(a, function (e) { return hasClass(e, 'kp-item-row') || hasClass(e, 'kp-poster'); }, scope);
+    if (!box) return false;
+    var img = box.querySelector('img');
+    if (img && !c.poster) c.poster = posterUrl(attr(img, 'src') || attr(img, 'data-src'), 0);
+    if (hasClass(box, 'kp-poster')) {
+      if (!c.title) c.title = txt(box.querySelector('.kp-poster-title'));
+      if (!c.orig) c.orig = txt(box.querySelector('.kp-poster-sub'));
+      var n = txt(box.querySelector('.kp-badge'));
+      if (!c.badge && /^\d+$/.test(n)) c.badge = n;
+      if (!c.rating) c.rating = ratings(box);
+    } else {
+      var name = box.querySelector('.kp-item-row-name a');
+      if (!c.title) c.title = attr(name, 'title') || txt(name);
+      if (!c.orig) c.orig = txt(box.querySelector('.kp-item-row-sub'));
+    }
+    return true;
+  }
+  /* "КП 7.9 · IMDb 8.1" from the rating pills of a poster card */
+  function ratings(box) {
+    var out = [];
+    toArr(box.querySelectorAll('.kp-rating-pill')).forEach(function (p) {
+      var v = (txt(p).match(/\d+(?:\.\d+)?/) || [''])[0];
+      if (!v) return;
+      if (p.querySelector('.kp-mark-kinopoisk')) out.push('КП ' + v);
+      else if (p.querySelector('.kp-mark-imdb')) out.push('IMDb ' + v);
+    });
+    return out.join(' · ');
+  }
+
   function content(d) { return d.querySelector('#view') || d.querySelector('#content') || d.body; }
 
   /* Catalog / search / history / watchlist page -> { items, hasNext } */
@@ -83,6 +120,15 @@
   /* Home page: rows of "h3.index" heading + carousel. */
   function home(d) {
     var rows = [];
+    // new design: section.kp-section > h2.kp-section-title > a, then a strip of a.kp-poster
+    toArr(d.querySelectorAll('section.kp-section')).forEach(function (sec) {
+      var h = sec.querySelector('.kp-section-title'), link = h ? h.querySelector('a') : null;
+      if (!h) return;
+      if (link && /^\/3d\b/.test(attr(link, 'href'))) return;
+      var items = cards(sec);
+      if (items.length) rows.push({ title: txt(h), path: link ? attr(link, 'href') : '', items: items });
+    });
+    if (rows.length) return rows;
     toArr(d.querySelectorAll('h3.index')).forEach(function (h) {
       var link = h.querySelector('a');
       var sib = h.nextElementSibling || h.nextSibling;
@@ -163,11 +209,18 @@
     var startIndex = scriptVar(d, 'PLAYER_START_INDEX');
     if (!id) { var canon = d.querySelector('link[rel="canonical"]'); id = itemId(attr(canon, 'href')) || (playlist[0] && playlist[0].id) || 0; }
 
-    var ru = txt(d.querySelector('.iv-title-ru')), orig = txt(d.querySelector('.iv-title-orig'));
+    var ru = txt(d.querySelector('.kp-head-titles h1')) || txt(d.querySelector('.iv-title-ru'));
+    var orig = txt(d.querySelector('.kp-head-orig')) || txt(d.querySelector('.iv-title-orig'));
     if (!ru) { var s = splitTitle(txt(d.querySelector('title'))); ru = s.title; orig = orig || s.orig; }
 
-    var big = d.querySelector('img.item-poster-relative');
+    var big = d.querySelector('img.kp-cover') || d.querySelector('img.item-poster-relative');
     var info = [];
+    // new design: dl.kp-dl > div > dt + dd
+    toArr(d.querySelectorAll('dl.kp-dl > div')).forEach(function (row) {
+      var k = txt(row.querySelector('dt')), dd = row.querySelector('dd');
+      var v = dd ? cellText(dd).replace(/\s*Добавить$/, '').replace(/,(\s*,)+/g, ',').replace(/,\s*$/, '') : '';
+      if (k && v) info.push({ k: k, v: v });
+    });
     toArr(d.querySelectorAll('table.iv-info tr')).forEach(function (tr) {
       var cells = tr.querySelectorAll('td,th');
       if (cells.length < 2) return;
@@ -175,15 +228,23 @@
       v = v.replace(/\s*Добавить$/, '').replace(/,(\s*,)+/g, ',');
       if (k && v) info.push({ k: k, v: v });
     });
-    var chips = toArr(d.querySelectorAll('.iv-chips .iv-chip')).map(txt).filter(function (x) { return x && !/^S\d+E\d+$/.test(x); });
+    var chips = toArr(d.querySelectorAll('.kp-head-titles .kp-chips .kp-chip, .iv-chips .iv-chip')).map(txt).filter(function (x) { return x && !/^S\d+E\d+$/.test(x); });
 
-    var sub = d.querySelector('#watchlist-subscription');
-    var favs = toArr(d.querySelectorAll('a.favorites-title')).map(function (a) {
+    var sub = d.querySelector('[data-kp-watchlist][data-subscribed]') || d.querySelector('#watchlist-subscription');
+    var favs = toArr(d.querySelectorAll('[data-kp-fav]')).map(function (b) {
+      return { id: attr(b, 'data-kp-fav'), title: txt(b), on: !!b.querySelector('.bi-check-square, .bi-check-square-fill') };
+    });
+    if (!favs.length) favs = toArr(d.querySelectorAll('a.favorites-title')).map(function (a) {
       return { id: attr(a, 'data-id'), title: txt(a), on: !!a.querySelector('.fa-check-square') };
     });
 
     /* "Похожие" at the bottom of the page: .iv-similar-card (poster, title, "год · ★ рейтинг") */
-    var similar = toArr(d.querySelectorAll('.iv-similar-card')).map(function (c) {
+    var similar = [];
+    toArr(d.querySelectorAll('section.kp-section')).forEach(function (sec) {
+      var h = sec.querySelector('h2, h3');
+      if (h && /Похожие/.test(txt(h))) similar = cards(sec).map(function (x) { x.meta = x.rating || x.orig; return x; });
+    });
+    if (!similar.length) similar = toArr(d.querySelectorAll('.iv-similar-card')).map(function (c) {
       var a = c.querySelector('a[href*="/item/view/"]'), sid = itemId(attr(a, 'href'));
       return { id: sid, title: txt(c.querySelector('.iv-similar-title')) || attr(c.querySelector('img'), 'alt'), orig: '', poster: posterUrl('', sid), badge: '', meta: txt(c.querySelector('.iv-similar-meta')) };
     }).filter(function (x) { return x.id && x.id !== (parseInt(id, 10) || 0); });
@@ -198,7 +259,7 @@
       poster: big ? posterUrl(attr(big, 'src'), 0) : POSTER + 'big/' + id + '.jpg',
       chips: chips,
       info: info,
-      plot: txt(d.querySelector('#plot')),
+      plot: txt(d.querySelector('#kpPlot')) || txt(d.querySelector('#plot')),
       serial: isSerial,
       seasons: seasons.map(function (s) { return { number: s.season, id: s.season_id, count: s.count, watched: !!s.allWatched }; }),
       currentSeason: curSeason == null ? (eps[0] ? eps[0].season : 0) : curSeason,
@@ -217,8 +278,9 @@
         if (c.nodeType === 3) { var t = c.textContent.replace(/\s+/g, ' '); if (t.replace(/\s/g, '')) { parts.push(label + t); label = ''; } }
         else if (c.nodeType === 1) {
           var cls = (c.className || '').toString();
-          if (/fa-imdb|imdb/.test(cls)) label = 'IMDb ';
+          if (/fa-imdb|imdb/.test(cls)) { label = 'IMDb '; if (/kp-mark/.test(cls)) continue; }   // new design: <i class="kp-mark-imdb">IMDb</i>
           else if (/kinopoisk/.test(cls)) label = 'КП ';
+          else if (/kp-mark-kw/.test(cls)) label = 'KW ';
           walk(c);
         }
       }

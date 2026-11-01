@@ -433,6 +433,12 @@
     var t = el('div', 'tile focusable');
     var img = el('img'); img.src = it.poster; img.alt = ''; t.appendChild(img);
     if (it.badge) t.appendChild(el('span', 'badge', it.badge));   // new episodes, top right like on the site
+    if (it.kp || it.imdb) {   // Кинопоиск and IMDb ratings at the bottom of the poster, like on the site
+      var r = el('span', 'tile-rating');
+      if (it.kp) { var k = el('span', 'tr-pill'); k.appendChild(el('b', 'tr-kp', 'КП')); k.appendChild(document.createTextNode(' ' + it.kp)); r.appendChild(k); }
+      if (it.imdb) { var m = el('span', 'tr-pill'); m.appendChild(el('b', 'tr-imdb', 'IMDb')); m.appendChild(document.createTextNode(' ' + it.imdb)); r.appendChild(m); }
+      t.appendChild(r);
+    }
     t.appendChild(el('div', 'tile-title', it.title));
     if (it.meta) t.appendChild(el('div', 'tile-meta', it.meta));
     t.onclick = function () { openItem(it.id); };

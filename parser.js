@@ -88,24 +88,25 @@
       if (!c.orig) c.orig = txt(box.querySelector('.kp-poster-sub'));
       var n = txt(box.querySelector('.kp-badge'));
       if (!c.badge && /^\d+$/.test(n)) c.badge = n;
-      if (!c.rating) c.rating = ratings(box);
     } else {
       var name = box.querySelector('.kp-item-row-name a');
       if (!c.title) c.title = attr(name, 'title') || txt(name);
       if (!c.orig) c.orig = txt(box.querySelector('.kp-item-row-sub'));
     }
+    if (!c.kp && !c.imdb) { var r = ratings(box); c.kp = r.kp; c.imdb = r.imdb; }
     return true;
   }
-  /* "КП 7.9 · IMDb 8.1" from the rating pills of a poster card */
+  /* Кинопоиск and IMDb ratings from the rating pills of a card ({kp:'7.9', imdb:'8.1'}).
+     The site's own rating (green thumbs-up, .kp-mark-kw) is skipped on purpose. */
   function ratings(box) {
-    var out = [];
+    var out = { kp: '', imdb: '' };
     toArr(box.querySelectorAll('.kp-rating-pill')).forEach(function (p) {
       var v = (txt(p).match(/\d+(?:\.\d+)?/) || [''])[0];
       if (!v) return;
-      if (p.querySelector('.kp-mark-kinopoisk')) out.push('КП ' + v);
-      else if (p.querySelector('.kp-mark-imdb')) out.push('IMDb ' + v);
+      if (p.querySelector('.kp-mark-kinopoisk')) out.kp = out.kp || v;
+      else if (p.querySelector('.kp-mark-imdb')) out.imdb = out.imdb || v;
     });
-    return out.join(' · ');
+    return out;
   }
 
   function content(d) { return d.querySelector('#view') || d.querySelector('#content') || d.body; }
@@ -242,7 +243,7 @@
     var similar = [];
     toArr(d.querySelectorAll('section.kp-section')).forEach(function (sec) {
       var h = sec.querySelector('h2, h3');
-      if (h && /Похожие/.test(txt(h))) similar = cards(sec).map(function (x) { x.meta = x.rating || x.orig; return x; });
+      if (h && /Похожие/.test(txt(h))) similar = cards(sec);
     });
     if (!similar.length) similar = toArr(d.querySelectorAll('.iv-similar-card')).map(function (c) {
       var a = c.querySelector('a[href*="/item/view/"]'), sid = itemId(attr(a, 'href'));
@@ -301,7 +302,7 @@
     var seen = {}, out = [];
     toArr(content(d).querySelectorAll('a[href*="/favorites/view"]')).forEach(function (a) {
       var m = /[?&]id=(\d+)/.exec(attr(a, 'href'));
-      var t = txt(a);
+      var t = txt(a.querySelector('.kp-poster-title')) || txt(a);   // new design: the folder card also has a count pill
       if (!m || seen[m[1]] || !t) return;
       seen[m[1]] = 1; out.push({ id: m[1], title: t });
     });
